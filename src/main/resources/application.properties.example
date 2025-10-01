@@ -1,0 +1,4 @@
+spring.application.name=termolivre
+twitch.channel.url=https://www.twitch.tv/
+deepseek.api.key=
+deepseek.api.url=https://api.deepseek.com/chat/completions
