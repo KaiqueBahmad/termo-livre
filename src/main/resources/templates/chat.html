@@ -78,11 +78,7 @@
             Twitch: <span th:text="${channel}">Canal</span>
         </div>
         <div id="messages" class="messages">
-            <div th:each="message : ${messages}" class="message">
-                <span class="sender" th:text="${message.sender} + ':'"></span>
-                <span th:text="${message.content}"></span>
-                <div class="timestamp" th:text="${message.timestamp}"></div>
-            </div>
+            <!-- As mensagens serão adicionadas dinamicamente via JavaScript -->
         </div>
     </div>
 

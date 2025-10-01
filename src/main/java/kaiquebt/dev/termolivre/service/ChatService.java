@@ -1,6 +1,5 @@
 package kaiquebt.dev.termolivre.service;
 
-import com.github.philippheuer.events4j.core.EventManager;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
@@ -12,15 +11,11 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class ChatService {
     
     private final SimpMessagingTemplate messagingTemplate;
-    private final List<ChatMessage> messages = new CopyOnWriteArrayList<>();
     private TwitchClient twitchClient;
     
     @Value("${twitch.channel.url:https://www.twitch.tv/}")
@@ -54,10 +49,8 @@ public class ChatService {
                 LocalDateTime.now()
             );
             
-            // Adicionar à lista de mensagens
-            messages.add(chatMessage);
-            
             // Enviar via WebSocket para os clientes conectados
+            // Não armazenamos as mensagens, apenas enviamos em tempo real
             messagingTemplate.convertAndSend("/topic/messages", chatMessage);
         });
     }
@@ -79,10 +72,6 @@ public class ChatService {
             }
         }
         return null;
-    }
-    
-    public List<ChatMessage> getMessages() {
-        return new ArrayList<>(messages);
     }
     
     public String getChatChannel() {

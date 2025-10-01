@@ -17,7 +17,6 @@ public class ChatController {
     @GetMapping("/")
     public String chatPage(Model model) {
         model.addAttribute("channel", chatService.getChatChannel());
-        model.addAttribute("messages", chatService.getMessages());
         return "chat";
     }
 }
