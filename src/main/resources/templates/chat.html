@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Chat em Tempo Real</title>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.0/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .channel-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .message .sender {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .message .timestamp {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .input-area button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .input-area button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="channel-header">
+            Canal: <span th:text="${channel}">Canal</span>
+        </div>
+        <div id="messages" class="messages">
+            <div th:each="message : ${messages}" class="message">
+                <span class="sender" th:text="${message.sender} + ':'"></span>
+                <span th:text="${message.content}"></span>
+                <div class="timestamp" th:text="${message.timestamp}"></div>
+            </div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="senderInput" placeholder="Seu nome">
+            <input type="text" id="messageInput" placeholder="Digite sua mensagem">
+            <button onclick="sendMessage()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        var stompClient = null;
+        
+        function connect() {
+            var socket = new SockJS('/ws-chat');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/messages', function(message) {
+                    showMessage(JSON.parse(message.body));
+                });
+            });
+        }
+        
+        function sendMessage() {
+            var sender = document.getElementById('senderInput').value;
+            var content = document.getElementById('messageInput').value;
+            if (sender && content) {
+                var message = {
+                    'sender': sender,
+                    'content': content
+                };
+                stompClient.send("/app/sendMessage", {}, JSON.stringify(message));
+                document.getElementById('messageInput').value = '';
+            }
+        }
+        
+        function showMessage(message) {
+            var messagesDiv = document.getElementById('messages');
+            var messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            var senderSpan = document.createElement('span');
+            senderSpan.className = 'sender';
+            senderSpan.appendChild(document.createTextNode(message.sender + ': '));
+            
+            var contentSpan = document.createElement('span');
+            contentSpan.appendChild(document.createTextNode(message.content));
+            
+            var timestampDiv = document.createElement('div');
+            timestampDiv.className = 'timestamp';
+            timestampDiv.appendChild(document.createTextNode(message.timestamp));
+            
+            messageElement.appendChild(senderSpan);
+            messageElement.appendChild(contentSpan);
+            messageElement.appendChild(timestampDiv);
+            
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Conectar quando a página carregar
+        window.onload = connect;
+        
+        // Permitir enviar mensagem com Enter
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
