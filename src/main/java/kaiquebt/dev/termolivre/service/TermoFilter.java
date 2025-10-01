@@ -1,15 +1,22 @@
 package kaiquebt.dev.termolivre.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
 public class TermoFilter {
     
+    @Autowired
+    private AiProvider aiProvider;
+
     // Palavras resposta do termo (hardcoded para exemplo)
     // Na prática, isso poderia vir de um banco de dados ou ser atualizado diariamente
     private final Set<String> termoAnswers = new HashSet<>(Arrays.asList(
@@ -19,20 +26,91 @@ public class TermoFilter {
     
     public boolean isMessageSafe(String message) {
         if (message == null || message.trim().isEmpty()) {
+            System.out.println("Message is null or empty, returning true");
             return true;
         }
         
         String cleanedMessage = cleanMessage(message);
+        System.out.println("Cleaned message: " + cleanedMessage);
         
         // Verificar se a mensagem contém diretamente alguma das palavras resposta
         for (String answer : termoAnswers) {
             if (containsWord(cleanedMessage, answer)) {
+                System.out.println("Found direct answer match: " + answer);
                 return false;
             }
         }
         
         // Verificar por tentativas comuns de ofuscação
-        return !containsObfuscatedTermoAnswer(cleanedMessage);
+        if (containsObfuscatedTermoAnswer(cleanedMessage)) {
+            System.out.println("Found obfuscated answer");
+            return false;
+        }
+        
+        // Se passou pelas verificações básicas, usar IA para análise mais sofisticada
+        System.out.println("Using AI for advanced analysis");
+        List<String> singleMessageList = Collections.singletonList(message);
+        List<Boolean> aiResults = aiProvider.analyzeMessagesForTermoAnswers(singleMessageList);
+        boolean result = !aiResults.get(0);
+        System.out.println("AI analysis result: " + result);
+        return result;
+    }
+    public List<Boolean> areMessagesSafe(List<String> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        List<Boolean> results = new ArrayList<>();
+        List<String> toAiAnalysis = new ArrayList<>();
+        List<Integer> aiAnalysisIndices = new ArrayList<>();
+        
+        // Primeira verificação: regras básicas
+        for (int i = 0; i < messages.size(); i++) {
+            String message = messages.get(i);
+            if (message == null || message.trim().isEmpty()) {
+                results.add(true);
+                continue;
+            }
+            
+            String cleanedMessage = cleanMessage(message);
+            boolean isUnsafe = false;
+            
+            // Verificar palavras resposta diretas
+            for (String answer : termoAnswers) {
+                if (containsWord(cleanedMessage, answer)) {
+                    isUnsafe = true;
+                    break;
+                }
+            }
+            
+            // Verificar ofuscações
+            if (!isUnsafe) {
+                isUnsafe = containsObfuscatedTermoAnswer(cleanedMessage);
+            }
+            
+            if (isUnsafe) {
+                results.add(false);
+            } else {
+                // Marcar para análise pela IA
+                toAiAnalysis.add(message);
+                aiAnalysisIndices.add(i);
+                results.add(true); // Temporariamente true, será atualizado pela IA
+            }
+        }
+        
+        // Análise pela IA em lote
+        if (!toAiAnalysis.isEmpty()) {
+            List<Boolean> aiResults = aiProvider.analyzeMessagesForTermoAnswers(toAiAnalysis);
+            for (int i = 0; i < aiResults.size(); i++) {
+                int originalIndex = aiAnalysisIndices.get(i);
+                // Se a IA detectou que é unsafe, atualizar o resultado
+                if (aiResults.get(i)) {
+                    results.set(originalIndex, false);
+                }
+            }
+        }
+        
+        return results;
     }
     
     private String cleanMessage(String message) {

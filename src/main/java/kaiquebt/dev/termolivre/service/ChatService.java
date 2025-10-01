@@ -4,6 +4,8 @@ import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
 import kaiquebt.dev.termolivre.model.ChatMessage;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -13,18 +15,15 @@ import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class ChatService {
-    
+    private final TermoFilter filter;
     private final SimpMessagingTemplate messagingTemplate;
     private TwitchClient twitchClient;
     
     @Value("${twitch.channel.url:https://www.twitch.tv/}")
     private String twitchChannelUrl;
-    
-    public ChatService(SimpMessagingTemplate messagingTemplate) {
-        this.messagingTemplate = messagingTemplate;
-    }
-    
+        
     @PostConstruct
     public void init() {
         // Extrair o nome do canal da URL
@@ -48,7 +47,9 @@ public class ChatService {
                 event.getUser().getName(),
                 LocalDateTime.now()
             );
-            
+            if (!filter.isMessageSafe(event.getMessage())) {
+                chatMessage.setContent("Usuário tentou dizer a resposta!");
+            }
             // Enviar via WebSocket para os clientes conectados
             // Não armazenamos as mensagens, apenas enviamos em tempo real
             messagingTemplate.convertAndSend("/topic/messages", chatMessage);
