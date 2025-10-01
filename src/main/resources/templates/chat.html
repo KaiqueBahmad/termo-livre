@@ -75,7 +75,7 @@
 <body>
     <div class="chat-container">
         <div class="channel-header">
-            Canal: <span th:text="${channel}">Canal</span>
+            Twitch: <span th:text="${channel}">Canal</span>
         </div>
         <div id="messages" class="messages">
             <div th:each="message : ${messages}" class="message">
@@ -83,11 +83,6 @@
                 <span th:text="${message.content}"></span>
                 <div class="timestamp" th:text="${message.timestamp}"></div>
             </div>
-        </div>
-        <div class="input-area">
-            <input type="text" id="senderInput" placeholder="Seu nome">
-            <input type="text" id="messageInput" placeholder="Digite sua mensagem">
-            <button onclick="sendMessage()">Enviar</button>
         </div>
     </div>
 
@@ -103,19 +98,6 @@
                     showMessage(JSON.parse(message.body));
                 });
             });
-        }
-        
-        function sendMessage() {
-            var sender = document.getElementById('senderInput').value;
-            var content = document.getElementById('messageInput').value;
-            if (sender && content) {
-                var message = {
-                    'sender': sender,
-                    'content': content
-                };
-                stompClient.send("/app/sendMessage", {}, JSON.stringify(message));
-                document.getElementById('messageInput').value = '';
-            }
         }
         
         function showMessage(message) {
@@ -144,13 +126,6 @@
         
         // Conectar quando a página carregar
         window.onload = connect;
-        
-        // Permitir enviar mensagem com Enter
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
     </script>
 </body>
 </html>
